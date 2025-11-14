@@ -24,7 +24,7 @@ output = {
         "(for the current task), "
         f"or `{claude_project_dir}/.meridian/memory.jsonl` using the `memory-curator` skill, as well as any other "
         "documents that should reflect what you accomplished during this session. If nothing significant happened, you may skip "
-        "the update. If you were working on a task, update the session progress and next steps in "
+        "the update. If you were working on a task, update the status, session progress and next steps in "
         f"`{claude_project_dir}/.meridian/tasks/TASK-###/TASK-###.yaml` with details such as: the current implementation "
         "step, key decisions made, issues discovered, complex problems solved, and any other important information from this "
         "session. Save information that would be difficult to rediscover in future sessions.\n\n"
@@ -32,12 +32,11 @@ output = {
         "stopping: run the project's tests, lint, and build commands. If any of these fail, you must fix the issues and rerun "
         "them until they pass before stopping. If they already passed recently and no further changes were made, you may state "
         "that they are already clean and stop.\n\n"
-        "If you don't have anything to update, your response to this hook must be VERY concise: \"Nothing to update.\" "
+        "If you have nothing to update, your response to this hook must be exactly the same as the message that was blocked."
         "If you did update something, resend the same message you sent before you were interrupted by this hook. "
         "Before marking a task as complete, review the 'Definition of Done' section in "
         f"`{claude_project_dir}/.meridian/prompts/agent-operating-manual.md`."
     ),
-    "suppressOutput": True,
     "systemMessage": "[Meridian] Before stopping, Claude is updating task files, backlog, and memory and verifying tests/lint/build so nothing is left incomplete."
 }
 

@@ -22,7 +22,6 @@ if tool_name == "ExitPlanMode":
             f"Before creating any new task brief or adding an entry to task-backlog.yaml, you MUST use the "
             f"`task-manager` skill."
         ),
-        "suppressOutput": True,
         "systemMessage": "[Meridian] Plan approved. Claude will now create a task folder, write the task brief, and update the backlog."
     }
     print(json.dumps(output))

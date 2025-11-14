@@ -1,4 +1,4 @@
-![Logo](https://private-user-images.githubusercontent.com/186849302/513748260-9eb140c8-b938-4e77-ab94-0461a6d919fd.jpeg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjMwMjA4NDMsIm5iZiI6MTc2MzAyMDU0MywicGF0aCI6Ii8xODY4NDkzMDIvNTEzNzQ4MjYwLTllYjE0MGM4LWI5MzgtNGU3Ny1hYjk0LTA0NjFhNmQ5MTlmZC5qcGVnP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9QUtJQVZDT0RZTFNBNTNQUUs0WkElMkYyMDI1MTExMyUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNTExMTNUMDc1NTQzWiZYLUFtei1FeHBpcmVzPTMwMCZYLUFtei1TaWduYXR1cmU9YWUzMmRmMjQ2ZmM5MjNiODU4YTkxZjBhMmQ5OWE5NDkxOGRhZDBlNWI1ZjExZWY0NTYzODBmMTUxMzdjYjE4YyZYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QifQ.5HRlVU6JcnP2tz0mlAMhA5XYAT9lM8TbK5ddXWrRYag)
+![Logo](https://github.com/user-attachments/assets/9eb140c8-b938-4e77-ab94-0461a6d919fd)
 # **Meridian** — a zero‑config Claude Code setup for Tasks, Memory & Guardrails
 
 Make Claude Code **predictable**: preserved context, enforced rules, in‑repo tasks, optional TDD—without changing how you talk to Claude.
@@ -7,6 +7,7 @@ Make Claude Code **predictable**: preserved context, enforced rules, in‑repo t
 * **Deterministic behavior**: hooks *enforce* the right steps (not just suggest them).
 * **Persistent context**: tasks, memory, and docs live in your repo.
 * **Plug‑in rules**: baseline `CODE_GUIDE.md` + project‑type add‑ons + optional **TDD** override.
+* **Zero behavior change**: no commands, no scripts, no special phrasing. You talk to Claude normally; Meridian handles everything behind the scenes.
 
 > If this setup helps, please ⭐ star the repo and share it.
 > Follow updates: [X (Twitter)](http://x.com/markmdev) • [LinkedIn](http://linkedin.com/in/markmdev)
@@ -23,6 +24,7 @@ Default Claude Code often loses context after compaction, forgets history, and d
 * **Follows guides** (baseline + add‑ons) every session—re‑injected by hooks.
 * **Reads relevant docs** you list—every startup/reload.
 * **Curates memory** of durable decisions (append‑only `memory.jsonl`).
+* **Never loses context after compaction**: hooks reinject the essential docs, standards, and the task Claude was working on so it always returns with full context.
 
 You keep chatting normally; **Claude** does the rest.
 
@@ -35,6 +37,7 @@ You keep chatting normally; **Claude** does the rest.
 * No subagent orchestration to maintain.
 
 Just copy two folders, make scripts executable, and continue working with Claude as usual.
+No workflow changes for the developer — no slash commands, no scripts, no special instructions. You interact with Claude exactly as you already do.
 
 ---
 
@@ -102,6 +105,8 @@ Each task lives in `.meridian/tasks/TASK-###/`:
 
 Backlog: `.meridian/task-backlog.yaml` tracks status (`todo`, `in_progress`, `blocked`, `done`).
 
+These task folders aren’t just for the developer — Claude actively uses them to restore context after startup or compaction.
+
 ### Relevant docs
 
 List any must‑read docs in `.meridian/relevant-docs.md`. Claude loads them on startup/reload.
@@ -118,6 +123,8 @@ Always read these files before continuing your work:
 
 `memory.jsonl` stores durable decisions and patterns. Claude reads it automatically.
 
+This memory exists primarily for Claude’s benefit: issues it encountered, architectural decisions, pitfalls, and patterns it should not repeat.
+
 * Claude uses the script (never edits manually):
 
   ```
@@ -130,13 +137,13 @@ Always read these files before continuing your work:
 ## Demo Project
 
 A full demo project using Meridian is included in this repo.
-Real examples of what Meridian generates:
+Real examples of what Meridian generates (and what Claude uses to re-enter the project with full context):
 
 * [demo/.meridian/tasks/TASK-001/TASK-001.yaml](demo/.meridian/tasks/TASK-001/TASK-001.yaml) — task brief
 * [demo/.meridian/tasks/TASK-001/TASK-001-plan.md](demo/.meridian/tasks/TASK-001/TASK-001-plan.md) — approved plan
 * [demo/.meridian/tasks/TASK-001/TASK-001-context.md](demo/.meridian/tasks/TASK-001/TASK-001-context.md) — context notes
 * [demo/.meridian/memory.jsonl](demo/.meridian/memory.jsonl) — memory entries
-* **Demo app:** https://<demo-url.com> *(optional)*
+* **Demo app:** https://meridian-orcin.vercel.app/
 
 ---
 
@@ -163,8 +170,7 @@ tdd_mode: false          # true enables TDD add-on and overrides testing rules
 ## How it actually runs (Claude does the work)
 
 1. **Startup/Reload**
-   Hooks inject the Agent Operating Manual, guides, memory, backlog, and relevant docs. A guard prevents tool use until Claude reviews them.
-
+   Hooks inject the Agent Operating Manual, guides, memory, backlog, relevant docs, and the active task state. Claude cannot proceed until it has reabsorbed this context, ensuring no loss after compaction.
 2. **Plan**
    You describe the task in Plan mode; Claude proposes a plan.
 
@@ -177,8 +183,8 @@ tdd_mode: false          # true enables TDD add-on and overrides testing rules
    * **If TDD is on:** Claude writes a failing test first, makes it pass, then refactors (per slice).
 
 5. **Compaction/Resume**
-   Reload hook re‑injects everything; a guard blocks tools until Claude finishes the quick context review and syncs the task notes.
-
+   Reload hook re-injects guidelines, memory, docs, and the task Claude was working on. A guard blocks tools until Claude finishes reviewing this restored context and syncs task notes.
+   
 6. **Stop**
    Stop hook blocks exit until Claude verifies tests/lint/build are clean and task/memory/doc updates are saved. If nothing changed, Claude states it and stops.
 
@@ -189,11 +195,11 @@ tdd_mode: false          # true enables TDD add-on and overrides testing rules
 ## Hooks (what each one enforces)
 
 * **`claude-init.py`** — on session start
-  Injects the manual, baseline guide, the selected project‑type add‑on, and TDD (if enabled), plus memory/backlog/relevant docs. Sets a “must review” flag.
-
+  Injects the manual, baseline guide, the selected project-type add-on, TDD (if enabled), memory, backlog, relevant docs, and the active task context. This ensures Claude always starts with the correct context. Sets a “must review” flag.
+  
 * **`session-reload.py` + `prompts/session-reload.md`** — on compaction/resume
-  Re‑injects required files and asks Claude to sync task notes before continuing. Sets the “must review” flag again.
-
+  Re-injects all essential context Claude needs after compaction (guidelines, memory, docs, active task). Ensures Claude cannot “come back empty.” Asks Claude to sync task notes before continuing. Sets the “must review” flag again.
+  
 * **`post-compact-guard.py`** — before tool use
   If the review flag exists, denies tool usage once with a reminder, then clears the flag.
 

@@ -29,7 +29,6 @@ if os.path.exists(flag_path):
                 "After you finish reviewing the required files, you may automatically resume your work—"
                 "no user confirmation is needed."
             ),
-            "suppressOutput": True,
             "systemMessage": "[Meridian] Hold on, Claude is reviewing the restored project context to avoid missing information. Tools will be available in a moment."
         }
     }

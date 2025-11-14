@@ -74,24 +74,26 @@ def main() -> int:
     reload_context = reload_context.replace("{{CODE_GUIDE_FILES}}", code_guide_files)
 
     additional_context = (
-        f"$<reload_context_system_message>{reload_context}"
+        f"<reload_context_system_message>{reload_context}"
         f"</reload_context_system_message>"
     )
 
-    payload = {
-        "systemMessage": (
-            "[Meridian] Session restored. Key project files were reloaded so Claude can "
-            "continue work without losing context. If you see any errors during this process, "
-            "don't worry, they are intentional."
-        ),
-        "hookSpecificOutput": {
-            "hookEventName": "SessionStart",
-            "additionalContext": additional_context,
-        },
-        "suppressOutput": True,
-    }
+    # payload = {
+    #     "systemMessage": (
+    #         "[Meridian] Session restored. Key project files were reloaded so Claude can "
+    #         "continue work without losing context. If you see any errors during this process, "
+    #         "don't worry, they are intentional."
+    #     ),
+    #     "hookSpecificOutput": {
+    #         "hookEventName": "SessionStart",
+    #         "additionalContext": additional_context,
+    #     },
+    #     "suppressOutput": True,
+    # }
 
-    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    # print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+    print(additional_context, end="")
 
     # Create flag to force Claude to review context on next tool use
     needs_context_review = base_dir / ".meridian" / ".needs-context-review"
