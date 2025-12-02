@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.0.4] - 2025-12-01
+
+### Changed
+- **CODE_GUIDE.md refactored**: Complete rewrite from 121 numbered rules to organized sections with headers. Now has shared "General" section for cross-cutting concerns (TypeScript, Error Handling, Security, Testing, Config). Removed universal rules (naming conventions, "comments explain why"), removed niche rules (stampede control, COOP/COEP), removed arbitrary numbers ("~150 lines"), softened absolutes to "prefer X unless Y".
+- **CODE_GUIDE_ADDON_HACKATHON.md refactored**: Streamlined with headers, generalized provider names (no more Auth0/Clerk/Firebase specifics), added graduation checklist.
+- **CODE_GUIDE_ADDON_PRODUCTION.md refactored**: Principles only, removed specific tech details (TS flags, distroless images, SBOM). Removed dark mode requirement. Focus on what to strengthen, not how.
+- **CODE_GUIDE_ADDON_TDD.md refactored**: 244 → 87 lines. Removed code skeletons and output templates. Kept core TDD workflow and "Confirm Test Cases with User" section.
+- **agent-operating-manual.md**: Added "Never Do" section (no silent pivots, no arbitrary metric targets, no silent error swallowing). Added "Verify Before Assuming" and "Reading Context Effectively" sections. Added DoD anti-patterns ("NOT done if"). Changed question guidance to encourage asking more.
+- **task-manager SKILL.md**: Added "New Task vs Continue Existing" criteria. Added inline context.md template with Origin section.
+- **memory-curator SKILL.md**: Added good/bad examples for when to create entries.
+- **TASK-000-context.md template**: Added Origin section for planning decisions.
+
+### Removed
+- PR link references from all documentation files
+- Arbitrary line count guidance from all guides
+- Code skeletons from TDD addon
+- Output format templates from TDD addon
+- Specific tool/flag names from production addon (kept as principles)
+
+## [0.0.3] - 2025-12-01
+
+### Added
+- **Pre-compaction sync hook** (`pre-compaction-sync.py`): Monitors token usage from transcript and prompts agent to save context before conversation compacts. Configurable threshold (default 150k tokens).
+- **Smart context guard** (`post-compact-guard.py` rewrite): Tracks required file reads in `.meridian/.pending-context-reads`. Allows Read tool for pending files, blocks other tools until all required files are read. No more "read files twice" problem.
+- **Required context files config** (`.meridian/required-context-files.yaml`): Centralized config for files that must be read on session start/reload. Supports core files, project-type addons, and TDD addon.
+- **Plan review hook** (`plan-review.py`): Requires plan-reviewer agent before exiting plan mode. Configurable via `plan_review_enabled` in config.yaml.
+- **Shared helpers module** (`.claude/hooks/lib/config.py`): Extracted common code (YAML parsing, config reading, flag management) from hooks to reduce duplication.
+- New config options in `.meridian/config.yaml`:
+  - `plan_review_enabled`: Toggle plan-reviewer requirement (default: true)
+  - `implementation_review_enabled`: Toggle implementation-reviewer in pre-stop hook (default: true)
+  - `pre_compaction_sync_enabled`: Toggle pre-compaction context save prompt (default: true)
+  - `pre_compaction_sync_threshold`: Token threshold for pre-compaction warning (default: 150000)
+
+### Changed
+- **Task workflow simplified**: Removed `TASK-###.yaml` and `TASK-###-plan.md` from task template. Plans are now managed by Claude Code in `.claude/plans/`. Task folders contain only `TASK-###-context.md` as the primary source of truth.
+- **task-backlog.yaml**: Now includes `plan_path` field pointing to Claude Code plan files.
+- **TASK-###-context.md template**: Enhanced with Status section, Key Decisions & Tradeoffs section, and structured Session Log format.
+- **session-reload.py**: Simplified post-compaction instructions since context should already be saved by pre-compaction hook. Now reads from required-context-files.yaml.
+- **claude-init.py**: Now reads from required-context-files.yaml instead of hardcoded file list.
+- All hooks refactored to use shared helpers module, reducing code duplication.
+
+### Removed
+- `TASK-###.yaml` template file (objective, constraints, requirements now live in Claude Code plan)
+- `TASK-###-plan.md` template file (plans managed by Claude Code)
+- `.claude/hooks/prompts/session-reload.md` (prompt now generated dynamically)
+- `.meridian/.needs-context-review` flag (replaced by `.pending-context-reads` smart tracking)
+
 ## [0.0.2] - 2025-11-20
 
 ### Added

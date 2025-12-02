@@ -6,33 +6,79 @@ description: Create and manage development tasks after the user approves a plan.
 # Task Manager Skill
 
 ## When to Use
-Immediately after a plan is approved. The script scaffolds the task folder, locks the plan, and registers the work in the backlog. Skip this skill for speculative ideas or unapproved work.
+Immediately after a plan is approved. The script scaffolds the task folder and registers the work in the backlog. Skip this skill for speculative ideas or unapproved work.
+
+### New Task vs Continue Existing
+
+**Create a NEW task when:**
+- Different objective or deliverable
+- Major pivot in approach (warrants fresh context)
+- Unrelated follow-up work
+
+**Continue EXISTING task when:**
+- Same goal, additional work discovered
+- Bug found during implementation (add to current task)
+- Scope refinement without changing objective
+
+When in doubt: if the same context.md would serve both pieces of work, continue the existing task.
 
 ---
 
 ## Workflow
-Stay concise. Record only the facts another engineer needs; skip filler or repetition. Avoid verbosity.
 
 ### Create the task
 ```bash
 python3 $CLAUDE_PROJECT_DIR/.claude/skills/task-manager/scripts/create-task.py
 ```
-The helper creates `.meridian/tasks/TASK-###/` with three files:
-- `TASK-###.yaml` — brief (objective, scope, acceptance, risks, links)
-- `TASK-###-plan.md` — exact approved plan (changes need re-approval)
-- `TASK-###-context.md` — running log of decisions, links, blockers
+Creates `.meridian/tasks/TASK-###/` with:
+- `TASK-###-context.md` — the primary source of truth for task state and history
 
-IDs are zero-padded (`TASK-001`). Read each file before editing (System limitation, you cannot edit the files before you read them).
+IDs are zero-padded (`TASK-001`). Read the file before editing.
 
-### Populate files
-- Complete the YAML template in `TASK-###.yaml`
-- Paste the approved plan into `TASK-###-plan.md`
-- Add an initial context entry with date, summary, and first steps in `TASK-###-context.md`
+### Populate context.md
+This is the main file. A new agent reading it should immediately understand the full picture.
+
+**Structure:**
+```markdown
+# TASK-### Context
+
+## Origin
+Why this task was created, key constraints from planning, alternatives considered.
+
+## Status
+- **Current state**: planning | in_progress | blocked | done
+- **Blockers**: none | description
+
+## Key Decisions & Tradeoffs
+- [Decision]: [Rationale]
+
+## Session Log
+### YYYY-MM-DD
+- What was done
+- Issues discovered
+- Next steps
+
+## References
+- Related: TASK-045
+- Docs: design-doc.md
+```
+
+Document:
+- Important decisions and tradeoffs (with rationale)
+- User discussions and their outcomes
+- Issues discovered during implementation
+- Links to related tasks, files, external docs
 
 ### Register in the backlog
 Add an item to `.meridian/task-backlog.yaml`:
-- `id`, `title`, `status: todo`, `priority`, `path: ".meridian/tasks/TASK-###/"`
-Only edit `status` and `priority` later; never rename IDs or delete entries.
+```yaml
+- id: TASK-###
+  title: "Action-oriented title"
+  priority: P1
+  status: todo
+  path: ".meridian/tasks/TASK-###/"
+  plan_path: "/absolute/path/to/.claude/plans/plan-name.md"
+```
 
 Allowed values:
 - `status`: `todo | in_progress | blocked | done`
@@ -42,9 +88,12 @@ Allowed values:
 
 ## During Execution
 - Switch backlog status to `in_progress` when coding starts; use `blocked` with a note in context if waiting.
-- Update `TASK-###-context.md` with timestamped notes for decisions, tradeoffs, blockers, and “MEMORY:” candidates (then call `memory-curator`).
-- Keep `TASK-###.yaml` accurate if scope, risks, or acceptance criteria shift (with approval).
-- Use `memory-curator` for durable facts (architecture shifts, lessons learned, traps to avoid later). Never edit `.meridian/memory.jsonl` manually.
+- Update `TASK-###-context.md` with timestamped entries for each session:
+  - What was done
+  - Decisions made with rationale
+  - Issues discovered
+  - "MEMORY:" candidates (then call `memory-curator`)
+- Use `memory-curator` for durable facts (architecture shifts, lessons learned, traps to avoid). Never edit `.meridian/memory.jsonl` manually.
 
 ---
 
@@ -59,13 +108,6 @@ Mark `done` only when all conditions hold:
 
 ## Plan or Scope Changes
 - Re-seek approval for any material change.
-- In `TASK-###-plan.md`, add `Amendment YYYY-MM-DD` with the new plan.
-- Log rationale + links in `TASK-###-context.md`.
-
----
-
-## Split / Merge / Cancel
-- **Split**: create new TASK IDs, move sections, add “Superseded by …” note in originals.
-- **Merge**: keep a primary task; mark others `done` with “Merged into …”.
-- **Cancel**: mark `done` with `resolution: canceled`; context must explain why.
+- The plan file (in `.claude/plans/`) is managed by Claude Code.
+- Log rationale and links in `TASK-###-context.md`.
 </task_manager>

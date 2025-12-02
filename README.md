@@ -9,7 +9,7 @@ Meridian keeps Claude Code predictable without changing how you talk to it. You 
 * **Plug‑in rules**: baseline `CODE_GUIDE.md` + project‑type add‑ons + optional **TDD** override.
 * **Zero behavior change**: no commands, no scripts, no special phrasing. You talk to Claude normally; Meridian handles everything behind the scenes.
 
-**Current version:** `0.0.2` (updated 2025‑11‑20). See [CHANGELOG.md](CHANGELOG.md) for details.
+**Current version:** `0.0.4` (updated 2025‑12‑01). See [CHANGELOG.md](CHANGELOG.md) for details.
 
 > If this setup helps, please ⭐ star the repo and share it.
 > Follow updates: [X (Twitter)](http://x.com/markmdev) • [LinkedIn](http://linkedin.com/in/markmdev)
@@ -90,22 +90,22 @@ The core system prompt that sets behavior and guardrails.
 
 ### Guides
 
-* **Baseline:** `.meridian/CODE_GUIDE.md` (Next.js/React + Node/TS + general rules).
+* **Baseline:** `.meridian/CODE_GUIDE.md` — organized by sections (General, Frontend, Backend) with focused, principle-based guidance for Next.js/React + Node/TS.
 * **Add‑ons (auto‑injected by config):**
 
-  * `CODE_GUIDE_ADDON_HACKATHON.md` — loosens requirements for simpler projects (not only hackathons).
-  * `CODE_GUIDE_ADDON_PRODUCTION.md` — tightens requirements for production needs.
+  * `CODE_GUIDE_ADDON_HACKATHON.md` — loosens requirements for simpler projects. Includes graduation checklist.
+  * `CODE_GUIDE_ADDON_PRODUCTION.md` — tightens requirements for production needs. Principles only, no specific tool prescriptions.
   * `CODE_GUIDE_ADDON_TDD.md` — **overrides all testing rules**; tests first (Red→Green→Refactor), even in hackathon mode.
 
 ### Tasks (after every **approved plan**)
 
 Each task lives in `.meridian/tasks/TASK-###/`:
 
-* `TASK-###.yaml`: brief (objective, scope, constraints, acceptance criteria, deliverables, risks, links)
-* `TASK-###-plan.md`: the approved plan (amendments tracked)
-* `TASK-###-context.md`: timestamped notes (decisions, blockers, PR links; `MEMORY:` markers)
+* `TASK-###-context.md`: the primary source of truth for task state and history — origin, decisions, blockers, session progress, and `MEMORY:` markers
 
-Backlog: `.meridian/task-backlog.yaml` tracks status (`todo`, `in_progress`, `blocked`, `done`).
+Plans are managed by Claude Code and stored in `.claude/plans/`. The backlog references each plan via `plan_path`.
+
+Backlog: `.meridian/task-backlog.yaml` tracks status (`todo`, `in_progress`, `blocked`, `done`) and `plan_path`.
 
 These task folders aren’t just for the developer; Claude actively uses them to restore context after startup or compaction.
 
@@ -135,9 +135,17 @@ Set in `.meridian/config.yaml`:
 ```yaml
 project_type: standard   # hackathon | standard | production
 tdd_mode: false          # true enables TDD add-on and overrides testing rules
+
+# Optional review toggles
+plan_review_enabled: true           # require plan-reviewer before exiting plan mode
+implementation_review_enabled: true # require implementation-reviewer before stopping
+
+# Pre-compaction context preservation
+pre_compaction_sync_enabled: true   # prompt to save context before compaction
+pre_compaction_sync_threshold: 150000  # token threshold for warning
 ```
 
-* **hackathon**: a loosened mode for simpler projects and fast iteration. Use it whenever you don’t need production-grade quality.
+* **hackathon**: a loosened mode for simpler projects and fast iteration. Use it whenever you don't need production-grade quality.
 * **standard**: the baseline defaults, balanced for most work.
 * **production**: a stricter mode for production-grade needs (security, reliability, performance).
 
@@ -150,50 +158,60 @@ tdd_mode: false          # true enables TDD add-on and overrides testing rules
 ## How it actually runs (Claude does the work)
 
 1. **Startup/Reload**
-   Hooks inject the Agent Operating Manual, guides, memory, backlog, relevant docs, and the active task state. Claude cannot proceed until it has reabsorbed this context, ensuring no loss after compaction.
+   Hooks inject the Agent Operating Manual, guides, memory, backlog, and relevant docs. A smart context guard tracks which files Claude reads and blocks other tools until all required files are reviewed.
+
 2. **Plan**
-   You describe the task in Plan mode; Claude proposes a plan.
+   You describe the task in Plan mode; Claude proposes a plan. If `plan_review_enabled`, a plan-reviewer agent validates the plan before Claude can exit plan mode.
 
 3. **Approve plan**
-   A hook forces Claude to create `TASK-###` (brief/plan/context) and update the backlog.
+   A hook reminds Claude to create a task folder (`TASK-###-context.md`) and update the backlog with the plan path.
 
 4. **Implement**
    Claude writes code following the guides, reads docs listed in `relevant-docs.md`, updates `TASK-###-context.md`, and—if needed—adds memory entries via the script.
 
    * **If TDD is on:** Claude writes a failing test first, makes it pass, then refactors (per slice).
 
-5. **Compaction/Resume**
-   Reload hook re-injects guidelines, memory, docs, and the task Claude was working on. A guard blocks tools until Claude finishes reviewing this restored context and syncs task notes.
-   
-6. **Stop**
-   Stop hook blocks exit until Claude verifies tests/lint/build are clean and task/memory/doc updates are saved. If nothing changed, Claude states it and stops.
+5. **Approaching Compaction**
+   When token usage approaches the threshold (default 150k), a hook prompts Claude to save current progress to the context file—preserving context for the agent that continues after compaction.
 
-> You don’t perform these steps manually—**Claude does**. You chat, approve, and review as normal.
+6. **Compaction/Resume**
+   Reload hook re-injects guidelines, memory, docs, and the task context. The smart guard ensures Claude reads all required files before continuing work.
+
+7. **Stop**
+   Stop hook blocks exit until Claude verifies tests/lint/build are clean and task/memory/doc updates are saved. If `implementation_review_enabled`, requires implementation-reviewer agent.
+
+> You don't perform these steps manually—**Claude does**. You chat, approve, and review as normal.
 
 ---
 
 ## Hooks (what each one enforces)
 
 * **`claude-init.py`** — on session start
-  Injects the manual, baseline guide, the selected project-type add-on, TDD (if enabled), memory, backlog, relevant docs, and the active task context. This ensures Claude always starts with the correct context. Sets a “must review” flag.
-  
+  Injects the manual, guides, memory, backlog, and relevant docs. Reads required files from `.meridian/required-context-files.yaml`. Creates a pending-reads list for the smart context guard.
+
 * **`startup-prune-completed-tasks.py`** — on startup/clear
   Keeps only the 10 most recent completed tasks in `task-backlog.yaml`, moves older `done/completed` entries into `task-backlog-archive.yaml`, and relocates their folders under `.meridian/tasks/archive/`.
-  
-* **`session-reload.py` + `prompts/session-reload.md`** — on compaction/resume
-  Re-injects all essential context Claude needs after compaction (guidelines, memory, docs, active task). Ensures Claude cannot “come back empty.” Asks Claude to sync task notes before continuing. Sets the “must review” flag again.
-  
-* **`post-compact-guard.py`** — before tool use
-  If the review flag exists, denies tool usage once with a reminder, then clears the flag.
 
-* **`plan-approval-reminder.py`** — when exiting Plan mode
-  Blocks until Claude creates `TASK-###` via **task‑manager** and updates the backlog (skips for tiny one‑off fixes).
+* **`session-reload.py`** — on compaction/resume
+  Re-injects essential context Claude needs after compaction. Creates pending-reads list for smart context guard.
+
+* **`post-compact-guard.py`** — smart context guard (before tool use)
+  Tracks which required files have been read. Allows Read tool for pending files; blocks other tools until all required files are read. Eliminates the "read files twice" problem.
+
+* **`pre-compaction-sync.py`** — before tool use (token monitoring)
+  Monitors token usage from transcript. When approaching compaction threshold (default 150k), prompts Claude to save current work to context file. Configurable via `pre_compaction_sync_threshold`.
+
+* **`plan-review.py`** — before exiting Plan mode
+  Requires plan-reviewer agent to validate the plan before implementation. Configurable via `plan_review_enabled`.
+
+* **`plan-approval-reminder.py`** — after exiting Plan mode
+  Reminds Claude to create `TASK-###` via **task‑manager** and update the backlog.
 
 * **`pre-stop-update.py`** — on stop
-  Blocks until Claude updates task files/backlog/memory and verifies tests/lint/build (or states “nothing to update”).
+  Blocks until Claude updates task files/backlog/memory and verifies tests/lint/build. Optionally requires implementation-reviewer (configurable via `implementation_review_enabled`).
 
 * **`permission-auto-approver.py`** — on `PermissionRequest`
-  Auto-allows whitelisted Meridian actions (task-manager, memory-curator, backlog updates, etc.) so low-risk tools run without interruptions.
+  Auto-allows whitelisted Meridian actions (task-manager, memory-curator, backlog updates, etc.).
 
 These guardrails turn guidance into **deterministic behavior**.
 

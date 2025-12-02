@@ -19,6 +19,16 @@ Create a memory entry if at least one is true:
 
 If none of the above is true, do not create an entry.
 
+### Good Examples
+- "Switched from Prisma to Drizzle for type-safe queries. Prisma's generated client caused 3s cold starts in serverless; Drizzle reduced to 200ms. Migration pattern in TASK-045."
+- "Auth tokens must be validated server-side even for internal APIs. TASK-023 security audit found client-side checks were bypassable."
+- "Rate limiting middleware must be first in chain. Discovered after production incident where auth middleware consumed rate limit tokens."
+
+### Poor Examples (don't create these)
+- "Fixed the bug in UserService" — too vague, no reusable insight
+- "Used React Query for data fetching" — obvious choice, no decision rationale
+- "Implemented TASK-067" — task summary belongs in task files, not memory
+
 ---
 
 ## Workflow
@@ -74,6 +84,7 @@ Write `--summary` as concise paragraph with maximum 2-3 sentences. If it doesn't
 Prefer a few broad tags over many hyper‑specific ones.
 
 Examples: `architecture`, `lessons-learned`, `problem-solved`, `pattern`, `decision`, `tradeoff`, `deprecation`, `migration`
+
 ---
 
 ## Links (make future retrieval easy)

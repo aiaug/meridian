@@ -1,10 +1,34 @@
-# Context & Progress — TASK-###
+# TASK-### Context
 
-## 2025-11-12T00:00:00Z
-- Created task with approved plan.
-- Links: none yet.
+> **Purpose**: This is the primary source of truth for task state and history. A new agent reading this file should immediately understand: what happened, key decisions made, current status, and next steps.
 
-## 2025-11-12T02:10:00Z
-- Implemented <module>; added tests.
-- Opened PR: <url>
-- MEMORY: Adopted pattern X for Y due to Z → will add via memory-curator.
+## Origin
+<!-- Why this task was created, key constraints from planning, alternatives considered -->
+
+## Status
+- **Current state**: planning | in_progress | blocked | done
+- **Blockers**: none
+
+## Key Decisions & Tradeoffs
+<!-- Document important choices made during planning/implementation -->
+<!-- Include: what was decided, why, alternatives considered, user input -->
+
+## Session Log
+<!-- Timestamped entries for each work session -->
+
+### YYYY-MM-DDTHH:MM:SSZ
+- Started task
+- Summary of what was done
+- Decisions made with rationale
+- Issues discovered
+
+### YYYY-MM-DDTHH:MM:SSZ
+- Continued implementation
+- Progress update
+- Next steps planned
+
+## References
+- Plan: (link to `.claude/plans/xxx.md`)
+- Related tasks:
+- Related files:
+- External docs:
