@@ -9,11 +9,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import List
 
-MEMORY_DEFAULT_PATH = Path(".meridian/memory.jsonl")
+MEMORY_RELATIVE_PATH = ".meridian/memory.jsonl"
+
+
+def get_default_memory_path() -> Path:
+    """Get the default memory path using CLAUDE_PROJECT_DIR if available."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if project_dir:
+        return Path(project_dir) / MEMORY_RELATIVE_PATH
+    return Path(MEMORY_RELATIVE_PATH)
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,8 +30,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--id", required=True, help="Memory id (e.g. mem-0023)")
     parser.add_argument(
         "--path",
-        default=str(MEMORY_DEFAULT_PATH),
-        help="Path to memory.jsonl (default: .meridian/memory.jsonl)",
+        default=None,
+        help="Path to memory.jsonl (default: $CLAUDE_PROJECT_DIR/.meridian/memory.jsonl)",
     )
     return parser.parse_args()
 
@@ -60,7 +69,7 @@ def delete_entry(entries: List[dict], entry_id: str) -> bool:
 
 def main() -> int:
     args = parse_args()
-    path = Path(args.path)
+    path = Path(args.path) if args.path else get_default_memory_path()
 
     try:
         entries = _load_entries(path)

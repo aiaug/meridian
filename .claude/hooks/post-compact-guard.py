@@ -3,6 +3,7 @@
 Smart Context Guard - PreToolUse Hook
 
 Ensures required context files are read before allowing other tools.
+Uses directory-based marker files for atomic operations (no race conditions).
 """
 
 import json
@@ -12,15 +13,12 @@ from pathlib import Path
 
 # Add lib to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "lib"))
-from config import PENDING_READS_FILE
-
-
-def normalize_path(path: str) -> str:
-    """Normalize a path for comparison."""
-    try:
-        return str(Path(path).resolve())
-    except Exception:
-        return path
+from config import (
+    get_pending_reads,
+    remove_pending_read,
+    cleanup_pending_reads,
+    PENDING_READS_DIR,
+)
 
 
 def main():
@@ -33,26 +31,19 @@ def main():
         sys.exit(0)
 
     cwd = input_data.get("cwd", os.getcwd())
-    pending_path = Path(cwd) / PENDING_READS_FILE
+    base_dir = Path(cwd)
+    pending_dir = base_dir / PENDING_READS_DIR
 
-    # No pending reads file = allow everything
-    if not pending_path.exists():
+    # No pending reads directory = allow everything
+    if not pending_dir.exists() or not pending_dir.is_dir():
         sys.exit(0)
 
-    # Load pending files
-    try:
-        pending_files = json.loads(pending_path.read_text())
-        if not isinstance(pending_files, list):
-            pending_files = []
-    except (json.JSONDecodeError, IOError):
-        pending_files = []
+    # Get pending files
+    pending_files = get_pending_reads(base_dir)
 
     # Empty list = clean up and allow
     if not pending_files:
-        try:
-            pending_path.unlink()
-        except Exception:
-            pass
+        cleanup_pending_reads(base_dir)
         sys.exit(0)
 
     tool_name = input_data.get("tool_name", "")
@@ -61,27 +52,21 @@ def main():
     # Handle Read tool specially
     if tool_name == "Read":
         file_path = tool_input.get("file_path", "")
-        normalized_target = normalize_path(file_path)
 
-        remaining = []
-        found = False
-        for pending_file in pending_files:
-            if normalize_path(pending_file) == normalized_target:
-                found = True
-            else:
-                remaining.append(pending_file)
-
-        if found:
-            if remaining:
-                pending_path.write_text(json.dumps(remaining))
-            else:
-                try:
-                    pending_path.unlink()
-                except Exception:
-                    pass
+        # Try to remove this file from pending (atomic operation)
+        if remove_pending_read(base_dir, file_path):
+            # Clean up directory if now empty
+            cleanup_pending_reads(base_dir)
             sys.exit(0)  # Allow this Read
 
     # Block: not a Read or Read for non-pending file
+    # Re-fetch pending files in case another parallel read removed some
+    pending_files = get_pending_reads(base_dir)
+
+    if not pending_files:
+        cleanup_pending_reads(base_dir)
+        sys.exit(0)
+
     file_list = "\n".join(f"- `{f}`" for f in pending_files)
 
     output = {

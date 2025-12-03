@@ -8,6 +8,7 @@ Prompts agent to save context before conversation compacts (based on token usage
 import json
 import sys
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add lib to path for imports
@@ -19,14 +20,41 @@ from config import (
     PRE_COMPACTION_FLAG,
 )
 
+LOG_FILE = ".meridian/.pre-compaction-sync.log"
 
-def get_total_tokens(transcript_path: str) -> int:
+
+def log_calculation(base_dir: Path, request_id: str, usage: dict, total: int,
+                    threshold: int, triggered: bool, error: str = None) -> None:
+    """Append a log entry for debugging token calculations."""
+    log_path = base_dir / LOG_FILE
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        entry = {
+            "timestamp": timestamp,
+            "request_id": request_id,
+            "usage": usage,
+            "total_calculated": total,
+            "threshold": threshold,
+            "triggered": triggered,
+        }
+        if error:
+            entry["error"] = error
+        with open(log_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass  # Don't fail the hook if logging fails
+
+
+def get_total_tokens(transcript_path: str, base_dir: Path, threshold: int) -> int:
     """Read the last entry from transcript and sum token usage."""
     if not transcript_path:
+        log_calculation(base_dir, "N/A", {}, 0, threshold, False, "no transcript_path")
         return 0
 
     path = Path(transcript_path)
     if not path.exists():
+        log_calculation(base_dir, "N/A", {}, 0, threshold, False, f"transcript not found: {transcript_path}")
         return 0
 
     try:
@@ -38,9 +66,11 @@ def get_total_tokens(transcript_path: str) -> int:
                     last_line = line.strip()
 
         if not last_line:
+            log_calculation(base_dir, "N/A", {}, 0, threshold, False, "empty transcript")
             return 0
 
         entry = json.loads(last_line)
+        request_id = entry.get("requestId", "unknown")
         usage = entry.get("message", {}).get("usage", {})
 
         total = 0
@@ -53,8 +83,12 @@ def get_total_tokens(transcript_path: str) -> int:
         total += cache_creation.get("ephemeral_5m_input_tokens", 0)
         total += cache_creation.get("ephemeral_1h_input_tokens", 0)
 
+        triggered = total >= threshold
+        log_calculation(base_dir, request_id, usage, total, threshold, triggered)
+
         return total
-    except (json.JSONDecodeError, IOError, KeyError):
+    except (json.JSONDecodeError, IOError, KeyError) as e:
+        log_calculation(base_dir, "N/A", {}, 0, threshold, False, f"parse error: {type(e).__name__}: {e}")
         return 0
 
 
@@ -81,8 +115,8 @@ def main():
 
     # Get transcript path and check token usage
     transcript_path = input_data.get("transcript_path", "")
-    total_tokens = get_total_tokens(transcript_path)
     threshold = config['pre_compaction_sync_threshold']
+    total_tokens = get_total_tokens(transcript_path, base_dir, threshold)
 
     # Under threshold, allow
     if total_tokens < threshold:

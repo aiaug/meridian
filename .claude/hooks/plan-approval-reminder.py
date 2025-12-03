@@ -23,13 +23,16 @@ def main():
         output = {
             "decision": "block",
             "reason": (
-                f"[SYSTEM]: If the user has approved the plan, you must create a task in "
-                f"`{claude_project_dir}/.meridian/task-backlog.yaml` and generate a task brief using "
-                f"the `task-manager` skill. Do not create a task if it is only a small change or a bug fix. "
-                f"Before creating any new task brief or adding an entry to task-backlog.yaml, you MUST use the "
-                f"`task-manager` skill."
+                f"[SYSTEM]: If the user has approved the plan, you must:\n\n"
+                f"1. **Archive the plan**: Copy the plan file from its current location (e.g., `~/.claude/plans/xxx.md`) "
+                f"to the task folder: `{claude_project_dir}/.meridian/tasks/TASK-###/plan.md`\n"
+                f"   Use: `cp <plan_file_path> {claude_project_dir}/.meridian/tasks/TASK-###/plan.md`\n\n"
+                f"2. **Create/update the task**: Add the task to `{claude_project_dir}/.meridian/task-backlog.yaml` "
+                f"and generate a task brief using the `task-manager` skill. Include `plan_path` pointing to the archived plan.\n\n"
+                f"Skip task creation only for trivial changes or small bug fixes.\n"
+                f"Before creating any new task brief, you MUST use the `task-manager` skill."
             ),
-            "systemMessage": "[Meridian] Plan approved. Claude will now create a task folder, write the task brief, and update the backlog."
+            "systemMessage": "[Meridian] Plan approved. Claude will archive the plan and create a task folder."
         }
         print(json.dumps(output))
         sys.exit(0)

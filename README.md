@@ -9,7 +9,7 @@ Meridian keeps Claude Code predictable without changing how you talk to it. You 
 * **Plug‑in rules**: baseline `CODE_GUIDE.md` + project‑type add‑ons + optional **TDD** override.
 * **Zero behavior change**: no commands, no scripts, no special phrasing. You talk to Claude normally; Meridian handles everything behind the scenes.
 
-**Current version:** `0.0.4` (updated 2025‑12‑01). See [CHANGELOG.md](CHANGELOG.md) for details.
+**Current version:** `0.0.5` (updated 2025‑12‑03). See [CHANGELOG.md](CHANGELOG.md) for details.
 
 > If this setup helps, please ⭐ star the repo and share it.
 > Follow updates: [X (Twitter)](http://x.com/markmdev) • [LinkedIn](http://linkedin.com/in/markmdev)
@@ -193,7 +193,7 @@ pre_compaction_sync_threshold: 150000  # token threshold for warning
   Keeps only the 10 most recent completed tasks in `task-backlog.yaml`, moves older `done/completed` entries into `task-backlog-archive.yaml`, and relocates their folders under `.meridian/tasks/archive/`.
 
 * **`session-reload.py`** — on compaction/resume
-  Re-injects essential context Claude needs after compaction. Creates pending-reads list for smart context guard.
+  Re-injects essential context Claude needs after compaction. Injects in-progress tasks with XML tags at top of context. Creates pending-reads list for smart context guard.
 
 * **`post-compact-guard.py`** — smart context guard (before tool use)
   Tracks which required files have been read. Allows Read tool for pending files; blocks other tools until all required files are read. Eliminates the "read files twice" problem.
@@ -205,7 +205,7 @@ pre_compaction_sync_threshold: 150000  # token threshold for warning
   Requires plan-reviewer agent to validate the plan before implementation. Configurable via `plan_review_enabled`.
 
 * **`plan-approval-reminder.py`** — after exiting Plan mode
-  Reminds Claude to create `TASK-###` via **task‑manager** and update the backlog.
+  Instructs Claude to archive the plan (copy from `~/.claude/plans/` to task folder), create `TASK-###` via **task‑manager**, and update the backlog.
 
 * **`pre-stop-update.py`** — on stop
   Blocks until Claude updates task files/backlog/memory and verifies tests/lint/build. Optionally requires implementation-reviewer (configurable via `implementation_review_enabled`).

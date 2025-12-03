@@ -10,7 +10,7 @@ from pathlib import Path
 # =============================================================================
 MERIDIAN_CONFIG = ".meridian/config.yaml"
 REQUIRED_CONTEXT_CONFIG = ".meridian/required-context-files.yaml"
-PENDING_READS_FILE = ".meridian/.pending-context-reads"
+PENDING_READS_DIR = ".meridian/.pending-context-reads"
 PRE_COMPACTION_FLAG = ".meridian/.pre-compaction-synced"
 PLAN_REVIEW_FLAG = ".meridian/.plan-review-blocked"
 
@@ -177,8 +177,13 @@ def get_required_files(base_dir: Path) -> list[str]:
     return files
 
 
-def get_additional_review_files(base_dir: Path) -> list[str]:
-    """Get list of additional files for implementation/plan review."""
+def get_additional_review_files(base_dir: Path, absolute: bool = False) -> list[str]:
+    """Get list of additional files for implementation/plan review.
+
+    Args:
+        base_dir: Base directory of the project
+        absolute: If True, return absolute paths; otherwise relative paths
+    """
     files = [".meridian/CODE_GUIDE.md", ".meridian/memory.jsonl"]
     project_config = get_project_config(base_dir)
 
@@ -191,6 +196,8 @@ def get_additional_review_files(base_dir: Path) -> list[str]:
         if (base_dir / addon).exists():
             files.append(addon)
 
+    if absolute:
+        return [str(base_dir / f) for f in files]
     return files
 
 
@@ -220,3 +227,167 @@ def create_flag(base_dir: Path, flag_path: str) -> None:
 def flag_exists(base_dir: Path, flag_path: str) -> bool:
     """Check if a flag file exists."""
     return (base_dir / flag_path).exists()
+
+
+# =============================================================================
+# PENDING READS DIRECTORY HELPERS
+# =============================================================================
+def create_pending_reads(base_dir: Path, files: list[str]) -> None:
+    """Create pending reads directory with marker files for each required file."""
+    pending_dir = base_dir / PENDING_READS_DIR
+
+    # Clean up any existing directory
+    if pending_dir.exists():
+        try:
+            for f in pending_dir.iterdir():
+                f.unlink()
+            pending_dir.rmdir()
+        except Exception:
+            pass
+
+    # Create fresh directory with marker files
+    try:
+        pending_dir.mkdir(parents=True, exist_ok=True)
+        for i, file_path in enumerate(files):
+            marker = pending_dir / f"{i}.pending"
+            marker.write_text(file_path)
+    except Exception:
+        pass
+
+
+def get_pending_reads(base_dir: Path) -> list[str]:
+    """Get list of pending files from marker directory."""
+    pending_dir = base_dir / PENDING_READS_DIR
+
+    if not pending_dir.exists() or not pending_dir.is_dir():
+        return []
+
+    files = []
+    try:
+        for marker in sorted(pending_dir.iterdir()):
+            if marker.suffix == ".pending":
+                files.append(marker.read_text().strip())
+    except Exception:
+        pass
+
+    return files
+
+
+def remove_pending_read(base_dir: Path, file_path: str) -> bool:
+    """Remove a file from pending reads. Returns True if found and removed."""
+    pending_dir = base_dir / PENDING_READS_DIR
+
+    if not pending_dir.exists():
+        return False
+
+    normalized_target = str(Path(file_path).resolve())
+
+    try:
+        for marker in pending_dir.iterdir():
+            if marker.suffix == ".pending":
+                pending_file = marker.read_text().strip()
+                try:
+                    normalized_pending = str(Path(pending_file).resolve())
+                except Exception:
+                    normalized_pending = pending_file
+
+                if normalized_pending == normalized_target:
+                    marker.unlink()  # Atomic delete
+                    return True
+    except Exception:
+        pass
+
+    return False
+
+
+def cleanup_pending_reads(base_dir: Path) -> None:
+    """Remove pending reads directory if empty."""
+    pending_dir = base_dir / PENDING_READS_DIR
+
+    if not pending_dir.exists():
+        return
+
+    try:
+        remaining = list(pending_dir.iterdir())
+        if not remaining:
+            pending_dir.rmdir()
+    except Exception:
+        pass
+
+
+# =============================================================================
+# TASK BACKLOG HELPERS
+# =============================================================================
+def get_in_progress_tasks(base_dir: Path) -> list[dict]:
+    """Parse task-backlog.yaml and return in-progress/active/pending tasks."""
+    backlog_path = base_dir / ".meridian" / "task-backlog.yaml"
+    if not backlog_path.exists():
+        return []
+
+    try:
+        content = backlog_path.read_text()
+    except IOError:
+        return []
+
+    tasks = []
+    current_task = {}
+    in_tasks_section = False
+
+    for line in content.split('\n'):
+        stripped = line.strip()
+
+        # Detect tasks section
+        if stripped.startswith('tasks:'):
+            in_tasks_section = True
+            continue
+
+        if not in_tasks_section:
+            continue
+
+        # New task item
+        if stripped.startswith('- id:'):
+            if current_task and current_task.get('status') in ('in-progress', 'active', 'pending'):
+                tasks.append(current_task)
+            current_task = {'id': stripped.split(':', 1)[1].strip().strip('"\'') }
+            continue
+
+        # Task properties
+        if current_task and ':' in stripped and not stripped.startswith('-'):
+            key, value = stripped.split(':', 1)
+            current_task[key.strip()] = value.strip().strip('"\'')
+
+    # Don't forget the last task
+    if current_task and current_task.get('status') in ('in-progress', 'active', 'pending'):
+        tasks.append(current_task)
+
+    return tasks
+
+
+def build_task_xml(tasks: list[dict], claude_project_dir: str) -> str:
+    """Build XML representation of in-progress tasks."""
+    if not tasks:
+        return ""
+
+    xml_parts = ["<in_progress_tasks>"]
+    for task in tasks:
+        task_id = task.get('id', 'unknown')
+        status = task.get('status', 'unknown')
+        plan_path = task.get('plan_path', '')
+        task_path = task.get('path', '')
+
+        # Build absolute paths
+        if plan_path and not plan_path.startswith('/'):
+            plan_path = f"{claude_project_dir}/{plan_path}"
+        if task_path and not task_path.startswith('/'):
+            task_path = f"{claude_project_dir}/{task_path}"
+
+        xml_parts.append(f"<task_{task_id}>")
+        xml_parts.append(f"  status: {status}")
+        if task_path:
+            xml_parts.append(f"  context: {task_path}TASK-{task_id}-context.md")
+        if plan_path:
+            xml_parts.append(f"  plan: {plan_path}")
+        xml_parts.append(f"</task_{task_id}>")
+
+    xml_parts.append("</in_progress_tasks>")
+    return "\n".join(xml_parts)

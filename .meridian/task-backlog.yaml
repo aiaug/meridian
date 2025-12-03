@@ -7,3 +7,4 @@ tasks:
     priority: P1
     status: done
     path: ".meridian/tasks/TASK-000/"
+    plan_path: "/Users/mark/.claude/plans/declarative-snuggling-key.md"

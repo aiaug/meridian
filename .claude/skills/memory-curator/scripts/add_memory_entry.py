@@ -41,9 +41,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, List
 
-MEMORY_DEFAULT_PATH = Path(".meridian/memory.jsonl")
+MEMORY_RELATIVE_PATH = ".meridian/memory.jsonl"
 ID_PREFIX = "mem-"
 ID_PATTERN = re.compile(r"^mem-(\d{4,})$")
+
+
+def get_default_memory_path() -> Path:
+    """Get the default memory path using CLAUDE_PROJECT_DIR if available."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if project_dir:
+        return Path(project_dir) / MEMORY_RELATIVE_PATH
+    return Path(MEMORY_RELATIVE_PATH)
 
 
 def parse_args() -> argparse.Namespace:
@@ -51,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--summary", required=True, help="Short markdown summary of the memory item")
     p.add_argument("--tags", action="append", default=[], help="Tags comma or space separated; may repeat the flag")
     p.add_argument("--links", action="append", default=[], help="Links (TASK ids, file paths, URLs). Comma or space separated; may repeat")
-    p.add_argument("--path", default=str(MEMORY_DEFAULT_PATH), help="Path to memory.jsonl (default: .meridian/memory.jsonl)")
+    p.add_argument("--path", default=None, help="Path to memory.jsonl (default: $CLAUDE_PROJECT_DIR/.meridian/memory.jsonl)")
     return p.parse_args()
 
 
@@ -183,7 +191,7 @@ def append_entry(path: Path, summary: str, tags: List[str], links: List[str]) ->
 
 def main() -> int:
     args = parse_args()
-    path = Path(args.path)
+    path = Path(args.path) if args.path else get_default_memory_path()
 
     if not args.summary or not args.summary.strip():
         print("Error: --summary is required and cannot be empty", file=sys.stderr)

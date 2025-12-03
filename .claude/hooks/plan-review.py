@@ -33,7 +33,8 @@ def main():
     hook_event = input_data.get("hook_event_name", "")
     tool_name = input_data.get("tool_name", "")
     cwd = input_data.get("cwd", os.getcwd())
-    base_dir = Path(cwd)
+    claude_project_dir = os.environ.get("CLAUDE_PROJECT_DIR", cwd)
+    base_dir = Path(claude_project_dir)
 
     # Only handle PreToolUse ExitPlanMode
     if hook_event != "PreToolUse" or tool_name != "ExitPlanMode":
@@ -52,7 +53,7 @@ def main():
     # Flag doesn't exist: create and block
     create_flag(base_dir, PLAN_REVIEW_FLAG)
 
-    files_list = '\n'.join(get_additional_review_files(base_dir))
+    files_list = '\n'.join(get_additional_review_files(base_dir, absolute=True))
 
     output = {
         "hookSpecificOutput": {

@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.5] - 2025-12-03
+
+### Added
+- **Plan archival workflow**: `plan-approval-reminder.py` now instructs agent to copy plans from Claude Code's ephemeral location (`~/.claude/plans/`) to task folders (`.meridian/tasks/TASK-###/plan.md`). Plans persist across sessions.
+- **In-progress task injection**: `session-reload.py` and `claude-init.py` now parse `task-backlog.yaml` and inject in-progress tasks at the top of context with XML tags (`<in_progress_tasks>`, `<task_###>`). Plan files from in-progress tasks are automatically added to required reads.
+- **Token calculation logging**: `pre-compaction-sync.py` now logs all calculations to `.meridian/.pre-compaction-sync.log` with request IDs for debugging.
+- **Task backlog helpers**: New `get_in_progress_tasks()` and `build_task_xml()` functions in shared config module.
+
+### Changed
+- **Planning workflow**: Main agent now instructed to delegate to Plan agent instead of manually writing plans. Plan agent must save plans to `.claude/plans/` and can use Explorer subagents.
+- **Pending reads**: Changed from single JSON file to directory-based marker files (`.meridian/.pending-context-reads/*.pending`). File deletion is atomic, fixing race conditions when agent reads files in parallel.
+- **Absolute paths everywhere**: All hooks and memory-curator scripts now use `CLAUDE_PROJECT_DIR` environment variable for absolute paths. Fixes issues when agent is in subdirectories.
+- **`get_additional_review_files()`**: Now accepts `absolute=True` parameter to return absolute paths.
+
+### Fixed
+- Race condition when agent reads required context files simultaneously
+- Relative paths failing when agent cd's into subdirectories
+- Memory curator scripts failing due to relative path resolution
+
 ## [0.0.4] - 2025-12-01
 
 ### Changed
