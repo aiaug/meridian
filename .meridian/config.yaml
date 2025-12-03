@@ -23,4 +23,4 @@ implementation_review_enabled: true
 pre_compaction_sync_enabled: true
 
 # Token threshold for pre-compaction sync warning (default: 150000).
-pre_compaction_sync_threshold: 150000
+pre_compaction_sync_threshold: 144000

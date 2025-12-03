@@ -88,7 +88,8 @@ Allowed values:
 
 ## During Execution
 - Switch backlog status to `in_progress` when coding starts; use `blocked` with a note in context if waiting.
-- Update `TASK-###-context.md` with timestamped entries for each session:
+- **Append to** `TASK-###-context.md` — never overwrite previous content. The file is a chronological log preserving full task history.
+- Add timestamped entries for each session:
   - What was done
   - Decisions made with rationale
   - Issues discovered

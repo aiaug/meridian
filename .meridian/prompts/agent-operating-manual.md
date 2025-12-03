@@ -44,6 +44,7 @@ See `task-manager` skill for detailed instructions.
 - Each task folder contains `TASK-###-context.md` — the primary source of truth for task state and history.
   - A new agent reading this file should immediately understand: what happened, key decisions made, current status, and next steps.
   - Document all important decisions, tradeoffs, user discussions, blockers, and session progress here.
+  - **Never overwrite previous content** — append new session entries. The context file is a chronological log that preserves the full history of work on the task.
 - Plans are managed by Claude Code and stored in `.claude/plans/`. Reference the plan path in `task-backlog.yaml`.
 - Keep `.meridian/task-backlog.yaml` current:
   - Mark completed tasks, add new tasks, update in‑progress status, reorder priorities.
@@ -66,6 +67,37 @@ See `task-manager` skill for detailed instructions.
   - Relevant TASK folder(s)
   - Key code files and any external docs
 - Request concrete deliverables (files, diffs, commands) and acceptance criteria; review outputs before integration.
+
+## Implementation Review (Multi-Reviewer Strategy)
+
+For large projects or multi-phase plans, use **multiple focused implementation-reviewers**:
+
+1. **One reviewer per phase**: Each reviewer gets a specific scope (files/folders) and the relevant plan section
+2. **Integration reviewer(s)**: One or more reviewers with `review_type: "integration"` to verify modules are wired together — use your judgment on how many based on project complexity
+3. **All run in parallel**: Call ALL reviewers (phase + integration) in a single message
+4. **Reviews written to files**: Reviewers write output to `.meridian/implementation-reviews/review-{id}.md` instead of returning directly
+
+**How to call multiple reviewers** (in a single message for parallel execution):
+```
+Task 1: implementation-reviewer
+  Scope: src/components/, src/hooks/
+  Plan section: Steps 1-3
+  Review type: phase
+
+Task 2: implementation-reviewer
+  Scope: src/services/, src/api/
+  Plan section: Steps 4-6
+  Review type: phase
+
+Task 3: implementation-reviewer
+  Scope: Full codebase entry points
+  Plan section: Integration phase
+  Review type: integration
+```
+
+**After all reviewers complete**: Read the review files from `.meridian/implementation-reviews/`, aggregate findings, and iterate on fixes until all reviews pass (score 9+).
+
+**Override agent limits**: For the review phase, you may spawn more than 3 agents if needed to cover all plan phases adequately.
 
 ## Code Quality Standards
 - Follow repo conventions (`CODE_GUIDE.md`) and the Baseline/Add-on guides for the stack in use.

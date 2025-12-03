@@ -31,7 +31,8 @@ def main():
         sys.exit(0)
 
     cwd = input_data.get("cwd", os.getcwd())
-    base_dir = Path(cwd)
+    claude_project_dir = os.environ.get("CLAUDE_PROJECT_DIR", cwd)
+    base_dir = Path(claude_project_dir)
     pending_dir = base_dir / PENDING_READS_DIR
 
     # No pending reads directory = allow everything

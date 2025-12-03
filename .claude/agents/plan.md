@@ -126,6 +126,36 @@ Break the work into atomic, verifiable steps:
 - Each step should be testable/verifiable
 - Dependencies between steps must be explicit
 
+### Phase 4: Integration Planning (MANDATORY)
+
+**Every plan that creates or modifies multiple modules MUST include an explicit Integration phase.**
+
+Do NOT assume integration is "obvious" or will happen naturally. Plan it explicitly:
+
+- **Wire everything together**: How do modules connect? What imports are needed?
+- **Entry points**: How does the application start and load all modules?
+- **Data flow**: How does data flow between components? Are all connections planned?
+- **Configuration**: Are all config values, environment variables, and settings defined?
+- **Initialization order**: What order must things initialize? Are there race conditions?
+- **Error boundaries**: How do errors propagate between modules?
+
+**Integration checklist for the plan:**
+- [ ] All modules are imported where they need to be used
+- [ ] Entry point (main, index, app) initializes all components
+- [ ] Routes/endpoints are registered with the router
+- [ ] Event handlers are connected to event sources
+- [ ] Database connections are established before queries
+- [ ] External service clients are initialized
+- [ ] UI components are mounted/rendered in the application
+
+**Common integration failures to prevent:**
+- Module exists but is never imported
+- Function exists but is never called
+- Component exists but is never rendered
+- API endpoint exists but is never routed
+- Config value defined but never read
+- Feature flag created but never checked
+
 ## Research Protocol
 
 You MUST actively explore the codebase:
@@ -270,6 +300,8 @@ Before finalizing your plan, verify:
 - [ ] All user constraints are addressed
 - [ ] Risks have been identified and mitigations provided
 - [ ] The plan follows existing codebase conventions
+- [ ] **Integration phase is included** (for multi-module plans)
+- [ ] **All modules are wired to entry points** (nothing orphaned)
 
 ## Critical Principles
 

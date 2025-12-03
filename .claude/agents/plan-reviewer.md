@@ -93,7 +93,25 @@ For each step in the plan, verify:
 - Does it have the prerequisites it needs?
 - Should it come before/after other steps?
 
-### Phase 3: Holistic Evaluation
+### Phase 3: Integration Verification (CRITICAL)
+
+**Every multi-module plan MUST have an explicit Integration phase.** If missing, flag as critical.
+
+Check for:
+- **Integration phase exists**: Is there a dedicated step/phase for wiring everything together?
+- **Entry points defined**: Does the plan specify how modules connect to the application entry point?
+- **No orphaned modules**: Every created module must be imported/used somewhere
+- **Data flow complete**: Can data actually flow from input to output through all planned components?
+- **Configuration planned**: Are all config values, env vars, and settings defined?
+
+**Integration red flags (flag as critical if found):**
+- Plan creates modules but never imports them anywhere
+- Plan creates API endpoints but doesn't register routes
+- Plan creates UI components but doesn't render them
+- Plan creates services but doesn't initialize them
+- Plan defines config schema but doesn't read values
+
+### Phase 4: Holistic Evaluation
 
 - Does the overall approach make architectural sense?
 - Are there better alternatives not considered?
@@ -168,6 +186,7 @@ Classify each finding into one of these categories:
 - **sequencing**: Steps in wrong order or missing prerequisites
 - **security**: Potential vulnerabilities or unsafe practices
 - **performance**: Efficiency concerns or scalability issues
+- **integration**: Missing or incomplete module integration (orphaned code, unwired components)
 
 ## Severity Classification
 
@@ -251,7 +270,7 @@ After completing your analysis, output ONLY a valid JSON object. Do not include 
   "findings": [
     {
       "step": "string | null",
-      "category": "feasibility|completeness|correctness|dependencies|side-effects|sequencing|security|performance",
+      "category": "feasibility|completeness|correctness|dependencies|side-effects|sequencing|security|performance|integration",
       "description": "Clear explanation of the issue and why it matters",
       "recommendation": "Specific action to resolve this finding",
       "code_snippets": ["path/to/file.ts:startLine-endLine"],

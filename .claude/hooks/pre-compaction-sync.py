@@ -99,21 +99,23 @@ def main():
         sys.exit(0)
 
     cwd = input_data.get("cwd", os.getcwd())
-    base_dir = Path(cwd)
+    claude_project_dir = os.environ.get("CLAUDE_PROJECT_DIR", cwd)
+    base_dir = Path(claude_project_dir)
 
     # Check if enabled in config
     config = get_project_config(base_dir)
     if not config['pre_compaction_sync_enabled']:
         sys.exit(0)
 
-    # If already synced this session, allow
-    if flag_exists(base_dir, PRE_COMPACTION_FLAG):
-        sys.exit(0)
-
-    # Get transcript path and check token usage
+    # Always calculate and log tokens (for debugging)
     transcript_path = input_data.get("transcript_path", "")
     threshold = config['pre_compaction_sync_threshold']
+    already_synced = flag_exists(base_dir, PRE_COMPACTION_FLAG)
     total_tokens = get_total_tokens(transcript_path, base_dir, threshold)
+
+    # If already synced this session, allow (but we still logged above)
+    if already_synced:
+        sys.exit(0)
 
     # Under threshold, allow
     if total_tokens < threshold:
@@ -132,14 +134,16 @@ def main():
                 f"**CONTEXT PRESERVATION REQUIRED** (Token usage: {total_tokens:,} / {threshold:,})\n\n"
                 "The conversation is approaching compaction. Before continuing, you MUST save your current work "
                 "to preserve context for the agent that will continue after compaction.\n\n"
-                "**Write to the task context file:**\n"
+                "**Append to the task context file** (never overwrite previous content):\n"
                 f"`{claude_project_dir}/.meridian/tasks/TASK-###/TASK-###-context.md`\n\n"
-                "Include:\n"
+                "Add a new dated session entry with:\n"
                 "- Current implementation step and progress\n"
                 "- Key decisions made this session and their rationale\n"
                 "- Issues discovered or blockers encountered\n"
                 "- What needs to be done next\n"
                 "- Any important information that would be difficult to rediscover\n\n"
+                "**If the context file exceeds 500 lines**, compact it to ~300 lines by summarizing the oldest entries first. "
+                "Preserve recent entries in full detail.\n\n"
                 "After updating the context file, you may continue your work."
             )
         }

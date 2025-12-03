@@ -32,14 +32,22 @@ def main() -> int:
     # Get required files from config
     required_files = get_required_files(base_dir)
 
-    # Add plan files from in-progress tasks to required files
+    # Add context and plan files from in-progress tasks to required files
     for task in in_progress_tasks:
+        task_id = task.get('id', '')
+        task_path = task.get('path', '')
         plan_path = task.get('plan_path', '')
+
+        # Add context file
+        if task_path and task_id:
+            # Handle IDs with or without TASK- prefix
+            id_part = task_id if task_id.startswith('TASK-') else f"TASK-{task_id}"
+            context_file = f"{task_path}{id_part}-context.md"
+            required_files.append(context_file)
+
+        # Add plan file
         if plan_path:
-            if plan_path.startswith('/'):
-                required_files.append(plan_path)
-            else:
-                required_files.append(plan_path)
+            required_files.append(plan_path)
 
     # Build file list for prompt
     file_bullets = "\n".join(f"- `{claude_project_dir}/{f}`" if not f.startswith('/') else f"- `{f}`" for f in required_files)

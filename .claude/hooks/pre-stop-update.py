@@ -63,20 +63,30 @@ def main():
     # Implementation review section (conditional)
     if config['implementation_review_enabled']:
         reason += (
-            "**IMPLEMENTATION REVIEW**: If you were working on implementing a plan, you MUST call the implementation-reviewer agent "
-            "to verify the implementation matches the plan. Call it with EXACTLY this prompt:\n\n"
+            "**IMPLEMENTATION REVIEW**: If you were working on implementing a plan, you MUST run implementation review.\n\n"
+            "**MULTI-REVIEWER STRATEGY** (for multi-phase plans):\n"
+            "- Spawn **one implementation-reviewer per plan phase** — each reviewer gets a specific scope (files/folders) and the relevant plan section\n"
+            "- Spawn **integration reviewer(s)** with `review_type: \"integration\"` to verify all modules are wired together — use your judgment on how many based on project complexity\n"
+            "- Call **ALL reviewers in parallel** (single message with multiple Task tool calls)\n"
+            "- You may spawn **more than 3 agents** for review — this is an exception to the soft limit\n\n"
+            "**Reviewer prompt format** (for each reviewer):\n"
             "---\n"
-            f"Plan: {{PLAN_FILE_PATH}}\n"
+            f"Review Scope: [FILES/FOLDERS TO REVIEW]\n"
+            f"Plan (relevant section): [PASTE OR REFERENCE PLAN STEPS]\n"
+            f"Review Type: phase | integration\n"
             f"Additional files to read:\n{files_list}\n"
             "---\n\n"
-            "Replace {PLAN_FILE_PATH} with the actual path to your plan file.\n\n"
-            f"**ITERATION REQUIRED**: The implementation must achieve a score of {REQUIRED_SCORE}+ to be considered complete.\n"
-            f"If the score is below {REQUIRED_SCORE}, you must:\n"
+            "**Review output**: Each reviewer writes their review to `.meridian/implementation-reviews/review-{{random}}.md` and returns only the file path.\n\n"
+            "**After all reviewers complete**:\n"
+            "1. Read all review files from `.meridian/implementation-reviews/`\n"
+            "2. Aggregate findings across all reviews\n"
+            f"3. Implementation must achieve score {REQUIRED_SCORE}+ on ALL reviews\n\n"
+            f"**ITERATION REQUIRED**: If any score is below {REQUIRED_SCORE}:\n"
             "1. Review each finding with the user using AskUserQuestion\n"
             "2. For findings the user wants to fix: make the fixes in the codebase\n"
             "3. For findings the user declines: note as `[USER_DECLINED: <finding> - Reason: <reason>]`\n"
-            "4. Call implementation-reviewer again\n"
-            f"5. Repeat until score reaches {REQUIRED_SCORE}+\n\n"
+            "4. Re-run the failing reviewer(s)\n"
+            f"5. Repeat until all scores reach {REQUIRED_SCORE}+\n\n"
         )
 
     # Footer

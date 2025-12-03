@@ -318,8 +318,11 @@ def cleanup_pending_reads(base_dir: Path) -> None:
 # =============================================================================
 # TASK BACKLOG HELPERS
 # =============================================================================
+COMPLETED_STATUSES = ('done', 'completed', 'finished', 'cancelled', 'archived')
+
+
 def get_in_progress_tasks(base_dir: Path) -> list[dict]:
-    """Parse task-backlog.yaml and return in-progress/active/pending tasks."""
+    """Parse task-backlog.yaml and return all non-completed tasks."""
     backlog_path = base_dir / ".meridian" / "task-backlog.yaml"
     if not backlog_path.exists():
         return []
@@ -346,7 +349,7 @@ def get_in_progress_tasks(base_dir: Path) -> list[dict]:
 
         # New task item
         if stripped.startswith('- id:'):
-            if current_task and current_task.get('status') in ('in-progress', 'active', 'pending'):
+            if current_task and current_task.get('status', '').lower() not in COMPLETED_STATUSES:
                 tasks.append(current_task)
             current_task = {'id': stripped.split(':', 1)[1].strip().strip('"\'') }
             continue
@@ -357,7 +360,7 @@ def get_in_progress_tasks(base_dir: Path) -> list[dict]:
             current_task[key.strip()] = value.strip().strip('"\'')
 
     # Don't forget the last task
-    if current_task and current_task.get('status') in ('in-progress', 'active', 'pending'):
+    if current_task and current_task.get('status', '').lower() not in COMPLETED_STATUSES:
         tasks.append(current_task)
 
     return tasks
@@ -381,10 +384,13 @@ def build_task_xml(tasks: list[dict], claude_project_dir: str) -> str:
         if task_path and not task_path.startswith('/'):
             task_path = f"{claude_project_dir}/{task_path}"
 
+        # Handle IDs with or without TASK- prefix
+        id_part = task_id if task_id.startswith('TASK-') else f"TASK-{task_id}"
+
         xml_parts.append(f"<task_{task_id}>")
         xml_parts.append(f"  status: {status}")
         if task_path:
-            xml_parts.append(f"  context: {task_path}TASK-{task_id}-context.md")
+            xml_parts.append(f"  context: {task_path}{id_part}-context.md")
         if plan_path:
             xml_parts.append(f"  plan: {plan_path}")
         xml_parts.append(f"</task_{task_id}>")
