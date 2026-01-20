@@ -665,19 +665,3 @@ Subagents don't share live context, re-read docs (token waste), and can't be res
 
 Context7 and DeepWiki give Claude access to current library documentation. Claude's training data has a cutoff, so when it needs to verify an API exists or check usage patterns, it queries these servers instead of guessing.
 
----
-
-## Contributing
-
-PRs and issues welcome at [github.com/markmdev/meridian](https://github.com/markmdev/meridian)
-
-**License:** MIT
-
----
-
-## Star & Share
-
-If Meridian improves your Claude Code sessions:
-
-- **Star this repo** so others can find it
-- Share your experience on [X (@markmdev)](http://x.com/markmdev) or [LinkedIn](http://linkedin.com/in/markmdev)
