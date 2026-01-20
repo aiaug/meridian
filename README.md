@@ -159,13 +159,13 @@ sequenceDiagram
 
 ```bash
 cd /path/to/your/project
-curl -fsSL https://raw.githubusercontent.com/markmdev/meridian/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/aiaug/meridian/main/install.sh | bash
 ```
 
 ### Install specific version
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/markmdev/meridian/main/install.sh | bash -s -- -v 0.0.28
+curl -fsSL https://raw.githubusercontent.com/aiaug/meridian/main/install.sh | bash -s -- -v 0.0.28
 ```
 
 ### Update existing installation
@@ -173,7 +173,7 @@ curl -fsSL https://raw.githubusercontent.com/markmdev/meridian/main/install.sh |
 ```bash
 # Same command — installer detects existing installation and updates
 # Your memory.jsonl, session-context.md, and config are preserved
-curl -fsSL https://raw.githubusercontent.com/markmdev/meridian/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/aiaug/meridian/main/install.sh | bash
 ```
 
 ### Check installed version
@@ -186,7 +186,7 @@ curl -fsSL https://raw.githubusercontent.com/markmdev/meridian/main/install.sh |
 ### Manual install
 
 ```bash
-git clone https://github.com/markmdev/meridian.git
+git clone https://github.com/aiaug/meridian.git
 cp -R meridian/.claude meridian/.meridian meridian/.mcp.json /path/to/your/project
 cd /path/to/your/project
 find .claude -type f -name '*.py' -print0 | xargs -0 chmod +x
